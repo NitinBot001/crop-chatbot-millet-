@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hal Chat - Farmer Assistant (Milets)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    label, select, input, textarea, button {
+      display: block;
+      margin-top: 1rem;
+      width: 100%;
+    }
+    textarea {
+      height: 100px;
+    }
+    #response {
+      margin-top: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ask Hal (Farmer AI)</h1>
+  <form id="chatForm">
+    <label for="message">Your Question:</label>
+    <textarea id="message" required></textarea>
+
+    <label for="lang">Response Language:</label>
+    <select id="lang">
+      <option value="en">English</option>
+      <option value="hi">Hindi</option>
+      <option value="mr">Marathi</option>
+      <option value="te">Telugu</option>
+      <option value="bn">Bengali</option>
+    </select>
+
+    <button type="submit">Ask</button>
+  </form>
+
+  <div id="response"></div>
+
+  <script>
+    document.getElementById("chatForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const message = document.getElementById("message").value;
+      const lang = document.getElementById("lang").value;
+
+      const responseBox = document.getElementById("response");
+      responseBox.innerHTML = "Thinking...";
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message, lang })
+        });
+
+        const data = await res.json();
+        responseBox.innerHTML = `<strong>Response:</strong><br>${data.response || data.error}`;
+      } catch (err) {
+        responseBox.innerHTML = "Error contacting the server.";
+      }
+    });
+  </script>
+</body>
+</html>
