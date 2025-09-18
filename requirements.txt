@@ -1,5 +1,4 @@
 Flask
-googletrans==4.0.0-rc1
 flask-cors
 openai>=1.0.0
 requests
