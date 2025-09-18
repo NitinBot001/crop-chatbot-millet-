@@ -1,18 +1,19 @@
 from flask import Flask, request, jsonify, render_template
-import google.generativeai as genai
+from openai import OpenAI
 import os
 import requests
 from flask_cors import CORS
 from googletrans import Translator
 
 # Load API key from environment variable
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise ValueError("Gemini API Key is missing. Set it in environment variables.")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("OpenAI API Key is missing. Set it in environment variables.")
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+# Configure OpenAI
+base_url = os.getenv("BASE_URL","https://generativelanguage.googleapis.com/v1beta/openai/")
+ai_model = os.getenv("MODEL","gemini-2.5-flash")
+client = OpenAI(base_url=base_url,api_key=OPENAI_API_KEY)
 
 # Set the static folder path to the "static" folder
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "static")
@@ -65,12 +66,21 @@ def chat():
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
 
-        prompt = [
-            SYSTEM_INSTRUCTION,
-            f"Context Data:\n{CONTEXT_DATA}",
-            f"\n\nUser Query: {user_message}"
+        # Create messages for OpenAI chat completion
+        messages = [
+            {"role": "system", "content": f"{SYSTEM_INSTRUCTION}\n\nContext Data:\n{CONTEXT_DATA}"},
+            {"role": "user", "content": user_message}
         ]
-        ai_response = model.generate_content(prompt).text.strip()
+
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model=ai_model,  # or "gpt-3.5-turbo" for cheaper option, or "gpt-4" for better quality
+            messages=messages,
+            temperature=0.7,
+            max_tokens=10000
+        )
+        
+        ai_response = response.choices[0].message.content.strip()
 
         if target_lang.lower() != "en":
             ai_response = translate_text(ai_response, target_lang)
