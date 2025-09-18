@@ -1,21 +1,24 @@
 from flask import Flask, request, jsonify, render_template
 import os
+import subprocess
+import sys
+subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "openai"])
 from flask_cors import CORS
-from googletrans import Translator
-import litellm # MODIFIED: Import litellm instead of OpenAI
+from openai import *
+import dotenv
+# Load environment variables from .env file
+dotenv.load_dotenv()
 
-# Load API key, base URL, and model from environment variables
-# LiteLLM can automatically read OPENAI_API_KEY, but we'll read it explicitly for clarity
-API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
-if not API_KEY:
-    raise ValueError("API Key is missing. Set OPENAI_API_KEY or GEMINI_API_KEY in environment variables.")
+# Load API key and base URL from environment variables
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("OpenAI API Key is missing. Set it in environment variables.")
 
-# Note: For litellm, the parameter is 'api_base' not 'base_url'
-API_BASE = os.getenv("OPENAI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai/")
-MODEL_NAME = os.getenv("OPENAI_MODEL", "gemini-1.5-flash") # Default model
+OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai/")  # Default is standard OpenAI
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gemini-2.5-flash")  # Default model
 
-# REMOVED: No need to instantiate a client with litellm
-# client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
+# Configure OpenAI client (supports custom base url for OpenAI-compatible APIs)
+client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
 
 # Set the static folder path to the "static" folder
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "static")
@@ -44,13 +47,10 @@ Response Rules:
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
-# Translator instance
-translator = Translator()
 
 def translate_text(text, target_lang):
     try:
-        translated = translator.translate(text, dest=target_lang)
-        return translated.text
+        return text
     except Exception as e:
         return f"Translation error: {str(e)}"
 
@@ -73,17 +73,12 @@ def chat():
             {"role": "user", "content": f"Context Data:\n{CONTEXT_DATA}\n\nUser Query: {user_message}"}
         ]
 
-        # MODIFIED: Call litellm.completion directly
-        # Pass the model, messages, api_key, and api_base here
-        response = litellm.completion(
-            model=MODEL_NAME,
+        # Call OpenAI (or OpenAI-compatible) chat API
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
             messages=messages,
-            temperature=0.7,
-            api_key=API_KEY,
-            api_base=API_BASE
+            temperature=0.7
         )
-        
-        # The response structure is the same as OpenAI's, so this part doesn't change
         ai_response = response.choices[0].message.content.strip()
 
         if target_lang.lower() != "en":
@@ -91,7 +86,6 @@ def chat():
 
         return jsonify({"response": ai_response})
     except Exception as e:
-        # LiteLLM can raise specific exceptions, but catching the general one is fine
         return jsonify({"error": str(e)}), 500
 
 
