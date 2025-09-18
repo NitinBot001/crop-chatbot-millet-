@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import os
 from flask_cors import CORS
 from googletrans import Translator
-from openai import OpenAI
+from openai import *
 
 # Load API key and base URL from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
