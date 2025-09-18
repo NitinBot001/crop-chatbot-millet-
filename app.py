@@ -1,19 +1,19 @@
 from flask import Flask, request, jsonify, render_template
-from openai import OpenAI
 import os
-import requests
 from flask_cors import CORS
 from googletrans import Translator
+from openai import OpenAI
 
-# Load API key from environment variable
+# Load API key and base URL from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("OpenAI API Key is missing. Set it in environment variables.")
 
-# Configure OpenAI
-base_url = os.getenv("BASE_URL","https://generativelanguage.googleapis.com/v1beta/openai/")
-ai_model = os.getenv("MODEL","gemini-2.5-flash")
-client = OpenAI(base_url=base_url,api_key=OPENAI_API_KEY)
+OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://generativelanguage.googleapis.com/v1beta/openai/")  # Default is standard OpenAI
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gemini-2.5-flash")  # Default model
+
+# Configure OpenAI client (supports custom base url for OpenAI-compatible APIs)
+client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
 
 # Set the static folder path to the "static" folder
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), "static")
@@ -66,20 +66,17 @@ def chat():
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
 
-        # Create messages for OpenAI chat completion
         messages = [
-            {"role": "system", "content": f"{SYSTEM_INSTRUCTION}\n\nContext Data:\n{CONTEXT_DATA}"},
-            {"role": "user", "content": user_message}
+            {"role": "system", "content": SYSTEM_INSTRUCTION},
+            {"role": "user", "content": f"Context Data:\n{CONTEXT_DATA}\n\nUser Query: {user_message}"}
         ]
 
-        # Call OpenAI API
+        # Call OpenAI (or OpenAI-compatible) chat API
         response = client.chat.completions.create(
-            model=ai_model,  # or "gpt-3.5-turbo" for cheaper option, or "gpt-4" for better quality
+            model=OPENAI_MODEL,
             messages=messages,
-            temperature=0.7,
-            max_tokens=10000
+            temperature=0.7
         )
-        
         ai_response = response.choices[0].message.content.strip()
 
         if target_lang.lower() != "en":
@@ -90,6 +87,5 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 
-# For local testing, you can use the following:
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
