@@ -4,10 +4,7 @@ import subprocess
 import sys
 subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "openai"])
 from flask_cors import CORS
-from openai import *
-import dotenv
-# Load environment variables from .env file
-dotenv.load_dotenv()
+from openai import OpenAI
 
 # Load API key and base URL from environment variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
